@@ -15,9 +15,9 @@ namespace EnteNazionaleIdrotask
         bool riempie;
 
         SemaphoreSlim semaphoreBenza;
-        SemaphoreSlim semaphoreFERMO;
 
         Queue<int> macchine;
+        Queue<TaskCompletionSource<bool>> pompaQueue;
 
         public CDistributore(int pompe, int capacitaSerbatoio)
         {
@@ -26,7 +26,7 @@ namespace EnteNazionaleIdrotask
             capacitaSerbatoioMax = capacitaSerbatoio;
             riempie = false;
             semaphoreBenza = new SemaphoreSlim(pompe, pompe);
-            semaphoreFERMO = new SemaphoreSlim(0, pompe);
+            pompaQueue = new Queue<TaskCompletionSource<bool>>();
         }
 
         public async Task RichiediPompa()
@@ -37,12 +37,15 @@ namespace EnteNazionaleIdrotask
 
         public async Task Pompa(int l)
         {
-            while (capacitaSerbatoioCurrent <= l)
-            {
-                await semaphoreFERMO.WaitAsync();
+            var tcs = new TaskCompletionSource<bool>();
+            pompaQueue.Enqueue(tcs);
+
+            if (capacitaSerbatoioCurrent <= l)
                 // rifornisci
-            }
+
             capacitaSerbatoioCurrent -= l;
+
+            pompaQueue.Dequeue();
             await Task.Delay(1000);
         }
 
@@ -60,7 +63,6 @@ namespace EnteNazionaleIdrotask
             capacitaSerbatoioCurrent = capacitaSerbatoioMax;
             await Task.Delay(1000);
 
-            semaphoreFERMO.Release(pompe);
         }
     }
 }
